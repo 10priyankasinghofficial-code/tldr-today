@@ -5,7 +5,6 @@ a wizarding-style newspaper as a single self-contained HTML file."""
 import base64
 import datetime as dt
 import io
-import json
 import math
 import email.utils
 import html
@@ -13,7 +12,6 @@ import os
 import re
 import subprocess
 import tempfile
-import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -241,77 +239,6 @@ def article(s, now, cls="", img=None, caption=None):
             f'rel="noopener">follow the owl to {e(s["source"])} →</a></p></article>')
 
 
-# (endpoint, model) pairs, tried in order
-REWRITE_MODELS = [
-    ("https://models.github.ai/inference/chat/completions", "openai/gpt-4.1-mini"),
-    ("https://models.inference.ai.azure.com/chat/completions", "gpt-4o-mini"),
-    ("https://models.github.ai/inference/chat/completions", "openai/gpt-4o-mini"),
-]
-REWRITE_PROMPT = """You rewrite news headlines and summaries for TL;DR Today, a daily paper read by people in their late teens and twenties.
-
-For each item, write:
-- "title": a headline of at most 12 words, in plain everyday English.
-- "summary": one or two short sentences, at most 40 words total, that say what happened and why it matters.
-
-Rules:
-- Keep every fact exact: names, places, numbers, dates and who said what. Never add anything that isn't in the original. If the original summary is empty or vague, summarise only what the headline says.
-- Use simple words and short sentences. Explain jargon in a few words.
-- Add a light touch of Gen Z slang where it fits naturally, at most one slang phrase per item: e.g. "lowkey", "highkey", "no cap", "it's giving", "a big W", "a major L", "the tea", "main character energy", "rent-free", "touch grass", "ate", "vibe check", "plot twist". Don't force it; many items need none.
-- No slang, jokes or playful tone at all on serious or sad stories: deaths, violence, war, crime victims, disasters, illness, abuse. Write those plainly and respectfully.
-- No emojis, hashtags or exclamation marks.
-
-Reply with JSON only: {"items": [{"id": <same id>, "title": "...", "summary": "..."}]} with one entry for every input item."""
-
-
-def rewrite(stories):
-    """Rewrites titles and summaries in plain, lightly Gen Z English via
-    GitHub Models. Any failure keeps the original wording."""
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token or not stories:
-        print("  rewrite: skipped (no GITHUB_TOKEN)")
-        return 0
-    batch = [{"id": i, "title": s["title"], "summary": s["summary"]} for i, s in enumerate(stories)]
-    for endpoint, model in REWRITE_MODELS:
-        body = json.dumps({
-            "model": model,
-            "temperature": 0.4,
-            "response_format": {"type": "json_object"},
-            "messages": [{"role": "system", "content": REWRITE_PROMPT},
-                         {"role": "user", "content": json.dumps({"items": batch}, ensure_ascii=False)}],
-        }).encode()
-        req = urllib.request.Request(
-            endpoint, data=body,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
-                     "Accept": "application/json"})
-        raw = b""
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                raw = r.read()
-            reply = json.loads(raw)
-            items = json.loads(reply["choices"][0]["message"]["content"])["items"]
-        except urllib.error.HTTPError as e:
-            print(f"  rewrite: {model} @ {endpoint} HTTP {e.code}: {e.read()[:200]!r}")
-            continue
-        except Exception as e:
-            print(f"  rewrite: {model} @ {endpoint} failed: {str(e)[:120]} | reply: {raw[:200]!r}")
-            continue
-        done = 0
-        for it in items:
-            try:
-                s = stories[int(it["id"])]
-                title, summary = clean(it["title"]), clean(it.get("summary", ""))
-            except (KeyError, ValueError, IndexError, TypeError):
-                continue
-            if 3 <= len(title) <= 140 and len(summary) <= 360:
-                s["title"] = title
-                if summary:
-                    s["summary"] = summary
-                done += 1
-        print(f"  rewrite: {done}/{len(stories)} via {model}")
-        return done
-    return 0
-
-
 def lead_html(lead, img, kicker, now):
     e = html.escape
     return ('<section class="front">'
@@ -339,12 +266,6 @@ def build():
     lead = next((s for s in world if s["image"]), world[0] if world else None)
     if lead:
         world.remove(lead)
-
-    # Plain-English rewrite, one request per section to stay within limits
-    print("Translating from Newspeak…")
-    for sec in SECTIONS:
-        batch = ([lead] if lead and sec == "world" else []) + by_sec[sec]
-        rewrite(batch)
 
     # Each section opens with a photograph: prefer a story whose feed has
     # one, otherwise look up the first story's og:image.
