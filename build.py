@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds The Morning Augury: fetches RSS from major news sites and renders
+"""Builds The Morning Roundup: fetches RSS from major news sites and renders
 a wizarding-style newspaper as a single self-contained HTML file."""
 
 import base64
@@ -17,8 +17,8 @@ import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "morning-augury.html")
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) MorningAugury/1.0"
+OUT = os.path.join(HERE, "morning-roundup.html")
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) MorningRoundup/1.0"
 
 # (section key, source name, feed url)
 FEEDS = [
@@ -310,7 +310,7 @@ def build():
     with open(os.path.join(HERE, "site", "index.html"), "w") as f:
         f.write('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                 '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-                '<meta property="og:title" content="The Morning Augury">\n'
+                '<meta property="og:title" content="The Morning Roundup">\n'
                 '<meta property="og:description" content="Today\'s headlines from the world\'s papers, delivered by owl.">\n'
                 '</head>\n<body>\n' + page + '\n</body>\n</html>\n')
     print(f"Printed {OUT} ({len(page)//1024} KB)")
