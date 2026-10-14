@@ -1,0 +1,235 @@
+<title>The Morning Augury</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=IM+Fell+Double+Pica:ital@0;1&display=swap">
+<style>
+/* A deliberate single look: aged newsprint, whatever the viewer's theme. */
+:root {
+  color-scheme: light;
+  --paper: #e8dabb;
+  --paper-deep: #d3bf93;
+  --ink: #221a10;
+  --ink-soft: #4f3f2a;
+  --ink-faint: #7a6649;
+  --rule: #34271a;
+  --oxblood: #7b2219;
+  --blackletter: "UnifrakturMaguntia", "Old English Text MT", "Times New Roman", serif;
+  --serif: "IM Fell English", "Iowan Old Style", Georgia, serif;
+  --display: "IM Fell Double Pica", "IM Fell English", Georgia, serif;
+  --caps: "IM Fell English SC", "IM Fell English", Georgia, serif;
+}
+html { background: #2a2016; }
+body {
+  margin: 0;
+  background: #2a2016;
+  color: var(--ink);
+  font: 17px/1.5 var(--serif);
+  padding-block: 28px 48px;
+  padding-inline: 16px;
+}
+.sheet {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(18px, 4vw, 52px);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(120, 84, 38, .28) 100%),
+    radial-gradient(circle at 12% 18%, rgba(140, 100, 50, .10), transparent 30%),
+    radial-gradient(circle at 88% 72%, rgba(140, 100, 50, .12), transparent 34%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .22 0 0 0 0 .1 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  box-shadow: 0 2px 0 var(--paper-deep), 0 24px 60px rgba(0, 0, 0, .55);
+}
+a { color: inherit; text-decoration: none; }
+a:hover h3, h3 a:hover, h2 a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible { outline: 2px dashed var(--oxblood); outline-offset: 3px; }
+
+/* ---------- Masthead ---------- */
+.mast { text-align: center; }
+.ears { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.ear {
+  flex: 0 1 170px;
+  border: 1.5px solid var(--rule);
+  outline: 1px solid var(--rule); outline-offset: 3px;
+  padding: 8px 10px;
+  font: 13px/1.3 var(--caps);
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+}
+.ear b { display: block; font: 21px/1.1 var(--display); color: var(--ink); letter-spacing: 0; }
+.title-wrap { flex: 1; min-width: 0; }
+.moon-ear { display: flex; align-items: center; gap: 8px; text-align: left; }
+.moon { width: 40px; height: 40px; flex: none; color: var(--ink); }
+.motto { font: italic 15px/1.2 var(--serif); color: var(--ink-soft); margin: 0 0 2px; }
+h1 {
+  font: 400 clamp(46px, 10vw, 118px)/.95 var(--blackletter);
+  margin: 0;
+  letter-spacing: .01em;
+  text-shadow: 0 0 1px rgba(34, 26, 16, .5);
+}
+.seal { display: block; margin: 6px auto 0; width: 230px; max-width: 70%; height: 14px; color: var(--rule); }
+.dateline {
+  margin-top: 14px;
+  border-top: 3px double var(--rule);
+  border-bottom: 3px double var(--rule);
+  padding: 6px 2px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 18px;
+  font: 14px/1.4 var(--caps);
+  letter-spacing: .06em;
+}
+.index {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 20px;
+  border-bottom: 1px solid var(--rule);
+  padding: 6px 0 7px;
+  font: italic 15px var(--serif);
+}
+.index a { color: var(--ink-soft); }
+.index a:hover { color: var(--oxblood); }
+
+/* ---------- Photographs (they move, of course) ---------- */
+.photo { margin: 0 0 12px; }
+.frame {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--rule);
+  background: #3b2e1f;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+}
+.frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(30, 20, 8, .55) 100%);
+  animation: flicker 5s steps(1) infinite;
+}
+.frame img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: grayscale(1) sepia(.65) contrast(1.12) brightness(.92);
+  transform-origin: 50% 45%;
+  animation: alive 14s ease-in-out infinite alternate;
+}
+.story:nth-child(2n) .frame img { animation-duration: 17s; animation-direction: alternate-reverse; }
+@keyframes alive {
+  0%   { transform: scale(1.06) translate(0, 0) rotate(0deg); }
+  30%  { transform: scale(1.11) translate(-1.6%, .8%) rotate(-.4deg); }
+  65%  { transform: scale(1.08) translate(1.4%, -1%) rotate(.35deg); }
+  100% { transform: scale(1.13) translate(-.6%, -1.4%) rotate(0deg); }
+}
+@keyframes flicker { 0%, 100% { opacity: 1; } 47% { opacity: .82; } 48% { opacity: 1; } 81% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+  .frame img, .frame::after { animation: none; }
+}
+figcaption { font: italic 13px/1.35 var(--serif); color: var(--ink-faint); margin-top: 5px; }
+
+/* ---------- Front page lead ---------- */
+.front {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 22px 0 24px;
+  border-bottom: 3px double var(--rule);
+}
+.lead-photo .frame { aspect-ratio: 5 / 4; }
+.kicker {
+  margin: 0 0 6px;
+  font: 15px var(--caps); letter-spacing: .18em;
+  color: var(--oxblood);
+}
+.front h2 {
+  font: 400 clamp(30px, 4.4vw, 50px)/1.04 var(--display);
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+.lead-dek {
+  font-size: 19px; line-height: 1.55; margin: 0 0 12px;
+}
+.lead-dek::first-letter {
+  float: left; font: 64px/.8 var(--blackletter); padding: 6px 8px 0 0; color: var(--oxblood);
+}
+
+/* ---------- Sections ---------- */
+.sec { padding-top: 22px; }
+.sec-head {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px;
+  border-top: 2px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 6px 0 5px;
+  margin-bottom: 16px;
+}
+.sec-head h2 { margin: 0; font: 400 clamp(22px, 3vw, 30px)/1.1 var(--display); text-wrap: balance; }
+.sec-head span { font: 13px var(--caps); letter-spacing: .14em; color: var(--ink-faint); }
+.cols {
+  columns: 3 260px;
+  column-gap: 30px;
+  column-rule: 1px solid rgba(52, 39, 26, .55);
+}
+.sec-world .cols { columns: 3 240px; }
+.story {
+  break-inside: avoid;
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px dotted rgba(52, 39, 26, .6);
+}
+.story h3 {
+  font: 400 20px/1.2 var(--display);
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+.story.first h3 { font-size: 25px; }
+.dek { margin: 0 0 6px; font-size: 16px; line-height: 1.5; color: var(--ink); hyphens: auto; }
+.byline { margin: 0; font: italic 13.5px/1.4 var(--serif); color: var(--ink-faint); }
+.byline a { color: var(--ink-soft); border-bottom: 1px solid rgba(52, 39, 26, .35); }
+.byline a:hover { color: var(--oxblood); border-color: var(--oxblood); }
+
+/* ---------- Colophon ---------- */
+.colophon {
+  margin-top: 26px;
+  border-top: 3px double var(--rule);
+  padding-top: 10px;
+  text-align: center;
+  font: italic 14px/1.5 var(--serif);
+  color: var(--ink-soft);
+}
+.colophon p { margin: 0 auto 4px; max-width: 70ch; }
+.colophon .sm { font: 12.5px var(--caps); letter-spacing: .08em; color: var(--ink-faint); }
+
+@media (max-width: 760px) {
+  body { font-size: 16px; padding-block: 0 24px; }
+  .ear { display: none; }
+  .front { grid-template-columns: 1fr; gap: 14px; }
+  .dateline { justify-content: center; text-align: center; }
+}
+</style>
+
+<div class="sheet">
+  <header class="mast">
+    <div class="ears">
+      <div class="ear"><b>Five Knuts</b>Free to Muggles<br>who ask nicely</div>
+      <div class="title-wrap">
+        <p class="motto">All the News the Owls Could Carry</p>
+        <h1>The Morning Augury</h1>
+        <svg class="seal" viewBox="0 0 230 14" aria-hidden="true">
+          <path d="M0 7h92M138 7h92" stroke="currentColor" stroke-width="1"/>
+          <path d="M115 1l5 6-5 6-5-6z" fill="currentColor"/>
+          <circle cx="100" cy="7" r="2" fill="currentColor"/><circle cx="130" cy="7" r="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="ear moon-ear"><svg class="moon" viewBox="-20 -20 40 40" aria-hidden="true"><defs><clipPath id="disc"><circle r="16"/></clipPath></defs><circle r="16" fill="#efe3c4" stroke="currentColor" stroke-width="1.2"/><circle r="16" cx="{{MOONX}}" fill="currentColor" clip-path="url(#disc)" opacity=".85"/></svg><span><b>Tonight</b>{{MOON}}</span></div>
+    </div>
+    <div class="dateline">
+      <span>Augury No. {{ISSUE}}</span>
+      <span>{{DATE}}</span>
+      <span>Inked by quill at {{UPDATED}}</span>
+    </div>
+    <nav class="index" aria-label="Sections">
+      <a href="#world">Distant Lands</a><a href="#india">The Realm</a><a href="#business">Gringotts Ledger</a>
+      <a href="#tech">Muggle Contraptions</a><a href="#science">Mysteries</a><a href="#sport">Quaffle Report</a>
+    </nav>
+  </header>
+
+  <main>
+{{BODY}}
+  </main>
+
+  <footer class="colophon">
+    <p>{{COUNT}} stories carried in overnight by owls from {{SOURCES}}. Tap any headline and the owl will fly you to the original report.</p>
+    <p class="sm">A fresh augury every dawn · Headlines remain the property of their publishers · No owls were overworked</p>
+  </footer>
+</div>
