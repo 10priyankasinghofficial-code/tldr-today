@@ -33,6 +33,7 @@ FEEDS = [
     ("tech", "The Verge", "https://www.theverge.com/rss/index.xml"),
     ("science", "ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml"),
     ("sport", "ESPN", "https://www.espn.com/espn/rss/news"),
+    ("sport", "BBC Sport", "https://feeds.bbci.co.uk/sport/rss.xml"),
 ]
 
 SECTIONS = {
