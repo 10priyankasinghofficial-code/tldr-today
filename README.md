@@ -5,7 +5,7 @@ Too Long; Didn't Read, so the owls read it for you. A wizarding-style daily news
 - **Global:** BBC News, The New York Times, The Guardian, Al Jazeera, NPR, BBC Business, The Verge, ScienceDaily, ESPN, BBC Sport
 - **India:** The Hindu, Times of India, Hindustan Times, NDTV, The Economic Times, Mint, The Hindu BusinessLine, ESPNcricinfo
 
-**Read it:** https://10priyankasinghofficial-code.github.io/morning-roundup/
+**Read it:** https://10priyankasinghofficial-code.github.io/tldr-today/
 
 - `build.py` fetches the feeds and renders `template.html` into `site/index.html`
 - `.github/workflows/daily.yml` runs it daily and deploys to GitHub Pages
