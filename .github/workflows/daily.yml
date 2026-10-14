@@ -1,4 +1,4 @@
-name: Print the Morning Roundup
+name: Print TL;DR Today
 
 on:
   schedule:
@@ -44,7 +44,7 @@ jobs:
         if: github.event_name == 'schedule'
         run: |
           date '+%F %R %Z' > last-edition.txt
-          git config user.name "Morning Roundup Owl"
+          git config user.name "TL;DR Today Owl"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add last-edition.txt
           git commit -m "Edition of $(date +%F)" && git push

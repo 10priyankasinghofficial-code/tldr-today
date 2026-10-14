@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds The Morning Roundup: fetches RSS from major news sites and renders
+"""Builds TL;DR Today: fetches RSS from major news sites and renders
 a wizarding-style newspaper as a single self-contained HTML file."""
 
 import base64
@@ -17,8 +17,8 @@ import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "morning-roundup.html")
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) MorningRoundup/1.0"
+OUT = os.path.join(HERE, "tldr-today.html")
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) TLDRToday/1.0"
 
 # (section key, source name, feed url)
 FEEDS = [
@@ -27,24 +27,43 @@ FEEDS = [
     ("world", "The Guardian", "https://www.theguardian.com/world/rss"),
     ("world", "Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
     ("world", "NPR", "https://feeds.npr.org/1001/rss.xml"),
-    ("india", "The Hindu", "https://www.thehindu.com/news/national/feeder/default.rss"),
-    ("india", "Times of India", "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"),
     ("business", "BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml"),
     ("tech", "The Verge", "https://www.theverge.com/rss/index.xml"),
     ("science", "ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml"),
     ("sport", "ESPN", "https://www.espn.com/espn/rss/news"),
     ("sport", "BBC Sport", "https://feeds.bbci.co.uk/sport/rss.xml"),
+    ("india", "The Hindu", "https://www.thehindu.com/news/national/feeder/default.rss"),
+    ("india", "Times of India", "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"),
+    ("india", "The Indian Express", "https://indianexpress.com/section/india/feed/"),
+    ("india", "Hindustan Times", "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"),
+    ("india", "NDTV", "https://feeds.feedburner.com/ndtvnews-india-news"),
+    ("business", "The Economic Times", "https://economictimes.indiatimes.com/rssfeedstopstories.cms"),
+    ("business", "Mint", "https://www.livemint.com/rss/news"),
+    ("business", "The Hindu BusinessLine", "https://www.thehindu.com/business/feeder/default.rss"),
+    ("business", "The Indian Express", "https://indianexpress.com/section/business/feed/"),
+    ("tech", "The Hindu", "https://www.thehindu.com/sci-tech/feeder/default.rss"),
+    ("tech", "Times of India", "https://timesofindia.indiatimes.com/rssfeeds/66949542.cms"),
+    ("tech", "Mint", "https://www.livemint.com/rss/technology"),
+    ("sport", "ESPNcricinfo", "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"),
+    ("sport", "The Hindu", "https://www.thehindu.com/sport/feeder/default.rss"),
+    ("sport", "Times of India", "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms"),
+    ("sport", "The Indian Express", "https://indianexpress.com/section/sports/feed/"),
 ]
 
+# One paper: global and Indian sources share each section.
+# key: (wizarding title, plain label, story count)
 SECTIONS = {
-    "world": ("Owl Post from Distant Lands", "World"),
-    "india": ("Tidings from the Realm", "India"),
-    "business": ("The Gringotts Ledger", "Business & Markets"),
-    "tech": ("Muggle Contraptions & Curiosities", "Technology"),
-    "science": ("Dispatches from the Department of Mysteries", "Science"),
-    "sport": ("The Quaffle Report", "Sport"),
+    "world": ("Owl Post from Distant Lands", "World", 9),
+    "india": ("Tidings from the Realm", "India", 9),
+    "business": ("The Gringotts Ledger", "Business & Markets", 8),
+    "tech": ("Muggle Contraptions & Curiosities", "Technology", 7),
+    "science": ("Dispatches from the Department of Mysteries", "Science", 4),
+    "sport": ("The Quaffle Report", "Sport & Cricket", 9),
 }
-PER_SECTION = {"world": 9, "india": 6, "business": 5, "tech": 5, "science": 5, "sport": 5}
+PER_SECTION = {k: v[2] for k, v in SECTIONS.items()}
+# The six lines of the TL;DR box: (section, label)
+TLDR = [("lead", "World"), ("india", "India"), ("business", "Money"),
+        ("tech", "Tech"), ("science", "Science"), ("sport", "Sport")]
 
 NS = {
     "media": "http://search.yahoo.com/mrss/",
@@ -227,6 +246,20 @@ def article(s, now, cls="", img=None, caption=None):
             f'rel="noopener">follow the owl to {e(s["source"])} →</a></p></article>')
 
 
+def lead_html(lead, img, kicker, now):
+    e = html.escape
+    return ('<section class="front">'
+            + (f'<figure class="photo lead-photo"><div class="frame"><img src="{img}" alt=""></div>'
+               f'<figcaption>Captured by enchanted camera, courtesy of {e(lead["source"])}</figcaption></figure>'
+               if img else "")
+            + f'<div class="lead-text"><p class="kicker">{e(kicker)}</p>'
+            f'<h2><a href="{e(lead["link"])}" target="_blank" rel="noopener">{e(lead["title"])}</a></h2>'
+            f'<p class="lead-dek">{e(lead["summary"])}</p>'
+            f'<p class="byline">{e(lead["source"])} · {ago(lead["date"], now)} — '
+            f'<a href="{e(lead["link"])}" target="_blank" rel="noopener">follow the owl for the full account →</a></p></div>'
+            '</section>')
+
+
 def build():
     now = dt.datetime.now(dt.timezone.utc)
     print("Summoning the owls…")
@@ -265,41 +298,38 @@ def build():
     local = dt.datetime.now()
     issue_no = (local.date() - dt.date(2026, 1, 1)).days + 1
     sources = sorted({s["source"] for s in stories})
+    e = html.escape
 
+    # TL;DR box: one line per beat, linking to the story itself
+    lines = []
+    for key, label in TLDR:
+        s = lead if key == "lead" else (by_sec[key] or [None])[0]
+        if s:
+            lines.append(f'<li><span class="tag">{label}</span><a href="{e(s["link"])}" target="_blank" '
+                         f'rel="noopener">{e(s["title"])}</a></li>')
     parts = []
-    if lead:
-        e = html.escape
-        lead_img = images.get(id(lead))
-        parts.append(
-            '<section class="front">'
-            + (f'<figure class="photo lead-photo"><div class="frame"><img src="{lead_img}" alt=""></div>'
-               f'<figcaption>Captured by enchanted camera, courtesy of {e(lead["source"])}</figcaption></figure>'
-               if lead_img else "")
-            + f'<div class="lead-text"><p class="kicker">Hot off the Enchanted Press</p>'
-            f'<h2><a href="{e(lead["link"])}" target="_blank" rel="noopener">{e(lead["title"])}</a></h2>'
-            f'<p class="lead-dek">{e(lead["summary"])}</p>'
-            f'<p class="byline">{e(lead["source"])} · {ago(lead["date"], now)} — '
-            f'<a href="{e(lead["link"])}" target="_blank" rel="noopener">follow the owl for the full account →</a></p></div>'
-            '</section>')
+    if lines:
+        parts.append('<aside class="tldr" aria-label="TL;DR"><h2>TL;DR <span>the day in '
+                     f'{["no", "one", "two", "three", "four", "five", "six"][len(lines)]} lines</span></h2>'
+                     f'<ol>{"".join(lines)}</ol></aside>')
 
-    for sec, (title, plain) in SECTIONS.items():
-        items = by_sec[sec]
-        if not items:
+    if lead:
+        parts.append(lead_html(lead, images.get(id(lead)), "Hot off the Enchanted Press", now))
+    for sec, (title, plain, _) in SECTIONS.items():
+        if not by_sec[sec]:
             continue
-        body = []
-        for i, s in enumerate(items):
-            img = images.get(id(s)) if i == 0 else None
-            body.append(article(s, now, "first" if i == 0 else "", img))
+        body = [article(s, now, "first" if i == 0 else "", images.get(id(s)) if i == 0 else None)
+                for i, s in enumerate(by_sec[sec])]
         parts.append(
             f'<section class="sec sec-{sec}" id="{sec}"><header class="sec-head">'
-            f'<h2>{html.escape(title)}</h2><span>{plain}</span></header>'
+            f'<h2>{e(title)}</h2><span>{plain}</span></header>'
             f'<div class="cols">{"".join(body)}</div></section>')
 
     page = (TEMPLATE
             .replace("{{DATE}}", local.strftime("%A, %-d %B %Y"))
             .replace("{{ISSUE}}", str(issue_no))
             .replace("{{UPDATED}}", local.strftime("%-I:%M %p").lower())
-            .replace("{{SOURCES}}", html.escape(", ".join(sources)))
+            .replace("{{SOURCES}}", e(", ".join(sources)))
             .replace("{{COUNT}}", str(sum(len(v) for v in by_sec.values()) + (1 if lead else 0)))
             .replace("{{MOON}}", "{} · {}% lit".format(*moon(now)[:2]))
             .replace("{{MOONX}}", "{:.1f}".format(moon_shadow(moon(now)[2])))
@@ -311,8 +341,8 @@ def build():
     with open(os.path.join(HERE, "site", "index.html"), "w") as f:
         f.write('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                 '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-                '<meta property="og:title" content="The Morning Roundup">\n'
-                '<meta property="og:description" content="Today\'s headlines from the world\'s papers, delivered by owl.">\n'
+                '<meta property="og:title" content="TL;DR Today">\n'
+                '<meta property="og:description" content="Today\'s global and India headlines, read by owls so you don\'t have to.">\n'
                 '</head>\n<body>\n' + page + '\n</body>\n</html>\n')
     print(f"Printed {OUT} ({len(page)//1024} KB)")
 
