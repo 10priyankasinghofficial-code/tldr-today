@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 import tempfile
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -35,20 +36,17 @@ FEEDS = [
     ("sport", "BBC Sport", "https://feeds.bbci.co.uk/sport/rss.xml"),
     ("india", "The Hindu", "https://www.thehindu.com/news/national/feeder/default.rss"),
     ("india", "Times of India", "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"),
-    ("india", "The Indian Express", "https://indianexpress.com/section/india/feed/"),
     ("india", "Hindustan Times", "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"),
     ("india", "NDTV", "https://feeds.feedburner.com/ndtvnews-india-news"),
     ("business", "The Economic Times", "https://economictimes.indiatimes.com/rssfeedstopstories.cms"),
     ("business", "Mint", "https://www.livemint.com/rss/news"),
     ("business", "The Hindu BusinessLine", "https://www.thehindu.com/business/feeder/default.rss"),
-    ("business", "The Indian Express", "https://indianexpress.com/section/business/feed/"),
     ("tech", "The Hindu", "https://www.thehindu.com/sci-tech/feeder/default.rss"),
     ("tech", "Times of India", "https://timesofindia.indiatimes.com/rssfeeds/66949542.cms"),
     ("tech", "Mint", "https://www.livemint.com/rss/technology"),
     ("sport", "ESPNcricinfo", "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"),
     ("sport", "The Hindu", "https://www.thehindu.com/sport/feeder/default.rss"),
     ("sport", "Times of India", "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms"),
-    ("sport", "The Indian Express", "https://indianexpress.com/section/sports/feed/"),
 ]
 
 # One paper: global and Indian sources share each section.
@@ -243,7 +241,12 @@ def article(s, now, cls="", img=None, caption=None):
             f'rel="noopener">follow the owl to {e(s["source"])} →</a></p></article>')
 
 
-REWRITE_MODELS = ["openai/gpt-4.1-mini", "openai/gpt-4o-mini"]
+# (endpoint, model) pairs, tried in order
+REWRITE_MODELS = [
+    ("https://models.github.ai/inference/chat/completions", "openai/gpt-4.1-mini"),
+    ("https://models.inference.ai.azure.com/chat/completions", "gpt-4o-mini"),
+    ("https://models.github.ai/inference/chat/completions", "openai/gpt-4o-mini"),
+]
 REWRITE_PROMPT = """You rewrite news headlines and summaries for TL;DR Today, a daily paper read by people in their late teens and twenties.
 
 For each item, write:
@@ -268,7 +271,7 @@ def rewrite(stories):
         print("  rewrite: skipped (no GITHUB_TOKEN)")
         return 0
     batch = [{"id": i, "title": s["title"], "summary": s["summary"]} for i, s in enumerate(stories)]
-    for model in REWRITE_MODELS:
+    for endpoint, model in REWRITE_MODELS:
         body = json.dumps({
             "model": model,
             "temperature": 0.4,
@@ -277,15 +280,20 @@ def rewrite(stories):
                          {"role": "user", "content": json.dumps({"items": batch}, ensure_ascii=False)}],
         }).encode()
         req = urllib.request.Request(
-            "https://models.github.ai/inference/chat/completions", data=body,
+            endpoint, data=body,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
                      "Accept": "application/json"})
+        raw = b""
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
-                reply = json.loads(r.read())
+                raw = r.read()
+            reply = json.loads(raw)
             items = json.loads(reply["choices"][0]["message"]["content"])["items"]
+        except urllib.error.HTTPError as e:
+            print(f"  rewrite: {model} @ {endpoint} HTTP {e.code}: {e.read()[:200]!r}")
+            continue
         except Exception as e:
-            print(f"  rewrite: {model} failed: {str(e)[:160]}")
+            print(f"  rewrite: {model} @ {endpoint} failed: {str(e)[:120]} | reply: {raw[:200]!r}")
             continue
         done = 0
         for it in items:
